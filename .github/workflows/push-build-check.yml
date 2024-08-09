@@ -16,7 +16,7 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
     
-      - name: Setup Go environment
+      - name: Setup ironment
         uses: actions/setup-go@v3.2.1
         with:
           # The Go version to download (if necessary) and use. Supports semver spec and ranges.
@@ -29,25 +29,20 @@ jobs:
           $env:CGO_ENABLED=0
           $env:GOOS="windows"
           $env:GOARCH="386"
-          go env
           go build -o bin/waym3u8_windows_x86.exe
 
           $env:GOOS="windows"
           $env:GOARCH="amd64"
-          go env
           go build -o bin/waym3u8_windows_x64.exe
 
           $env:GOOS="linux"
           $env:GOARCH="386"
-          go env
           go build -o bin/waym3u8_linux_x86
 
           $env:GOOS="linux"
           $env:GOARCH="amd64"
-          go env
           go build -o bin/waym3u8_linux_x64
 
           $env:GOOS="linux"
           $env:GOARCH="mipsle"
-          go env
           go build -o bin/waym3u8_linux_mipsle

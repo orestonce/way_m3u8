@@ -31,27 +31,22 @@ jobs:
           $env:CGO_ENABLED=0
           $env:GOOS="windows"
           $env:GOARCH="386"
-          go env
           go build -o bin/waym3u8_windows_x86.exe
-          
+
           $env:GOOS="windows"
           $env:GOARCH="amd64"
-          go env
           go build -o bin/waym3u8_windows_x64.exe
-          
+
           $env:GOOS="linux"
           $env:GOARCH="386"
-          go env
           go build -o bin/waym3u8_linux_x86
-          
+
           $env:GOOS="linux"
           $env:GOARCH="amd64"
-          go env
           go build -o bin/waym3u8_linux_x64
 
           $env:GOOS="linux"
           $env:GOARCH="mipsle"
-          go env
           go build -o bin/waym3u8_linux_mipsle
 
       - name: upload release waym3u8_windows_x86
