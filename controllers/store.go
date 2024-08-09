@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/orestonce/m3u8d"
+	"gom3u8/worker"
 	"net/url"
 	"path/filepath"
-	"way_m3u8/worker"
 )
 
 func StoreURL(c *gin.Context) {

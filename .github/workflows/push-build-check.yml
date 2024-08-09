@@ -24,6 +24,8 @@ jobs:
       - name: build
         run: |
           go mod tidy
+          go run export/main.go
+          
           $env:CGO_ENABLED=0
           $env:GOOS="windows"
           $env:GOARCH="386"

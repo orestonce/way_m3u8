@@ -19,17 +19,11 @@ import (
 var static embed.FS
 
 func main() {
-
 	conf.ConfInit()
-	log_nu, err := strconv.Atoi(conf.ConfMap["log_Nu"].(string))
-	if err != nil {
-		fmt.Println("log_Nu err:", err)
-		return
-	}
 	logFile := &lumberjack.Logger{
 		Filename:   "./log/log.txt",
 		MaxSize:    10, // MB
-		MaxBackups: log_nu,
+		MaxBackups: conf.ConfMap.Log.LogNu,
 		MaxAge:     28, // days
 		Compress:   true,
 		LocalTime:  true,
@@ -46,7 +40,6 @@ func run() {
 	go work.Working()
 	r := gin.Default()
 	tc := task.TaskController{}
-	//r.Static("/static", "./static")
 	sub, err := fs.Sub(static, "static")
 	if err != nil {
 		panic(err)
@@ -57,6 +50,6 @@ func run() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{})
 	})
-	fmt.Println("open http://127.0.0.1:2045/static/ ")
-	r.Run(":" + fmt.Sprint(conf.ConfMap["Init.Port"])) // 监听2045端口
+	fmt.Println("open http://127.0.0.1:" + strconv.Itoa(conf.ConfMap.Init.Port) + "/static/ ")
+	r.Run(":" + strconv.Itoa(conf.ConfMap.Init.Port)) // 监听2045端口
 }

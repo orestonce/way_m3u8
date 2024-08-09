@@ -14,10 +14,9 @@ func (TaskController) AddTask(c *gin.Context) {
 	save_dir := c.PostForm("save_dir")
 	file_name := c.PostForm("file_name")
 	if len(save_dir) == 0 || len(file_name) == 0 {
-		save_dir = conf.ConfMap["save_dir"].(string)
+		save_dir = conf.ConfMap.Init.SavePath
 	}
-	w := &work.Work{}
-	err := w.Save(url, file_name, save_dir)
+	err := work.WorkSave(url, file_name, save_dir)
 	if err != nil {
 		c.JSON(400, gin.H{"err": err.Error()})
 		return

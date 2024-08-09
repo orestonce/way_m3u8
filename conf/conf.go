@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 type Config struct {
@@ -18,44 +19,53 @@ type Config struct {
 	Log struct {
 		Path  string `yaml:"path"`
 		Level string `yaml:"level"`
-		LogNu string `yaml:"log_Nu"`
+		LogNu int    `yaml:"log_Nu"`
 	} `yaml:"log"`
 }
 
 func NewConfig() *Config {
 	c := new(Config)
 	c.Init.Port = 2045
-	c.Init.SavePath = "../../m3u8"
+	c.Init.SavePath = "./video"
 	c.Init.WorkMax = 1
 	c.Log.Level = "debug"
 	c.Log.Path = "./log"
-	c.Log.LogNu = "10"
+	c.Log.LogNu = 10
 	return c
 }
 
-var ConfMap map[string]interface{}
+var ConfMap Config
 
 func ConfInit() {
+	useDefaultConfig := true
 	// 读取YAML配置文件内容
 	yamlFile, err := os.ReadFile("./conf.yaml")
 	if err != nil {
-		log.Fatalf("无法读取YAML文件：%v", err)
-		return
+		log.Println("无法读取YAML文件：%v", err)
+	} else {
+		// 解析YAML配置文件
+		configTemp := NewConfig()
+		err = yaml.Unmarshal(yamlFile, &configTemp)
+		if err != nil {
+			log.Println("无法解析YAML文件：%v", err)
+		} else {
+			useDefaultConfig = false
+			ConfMap = *configTemp
+		}
 	}
-
-	// 解析YAML配置文件
-	config := NewConfig()
-	err = yaml.Unmarshal(yamlFile, &config)
-	if err != nil {
-		log.Fatalf("无法解析YAML文件：%v", err)
+	if useDefaultConfig {
+		ConfMap = *NewConfig()
 	}
-	ConfMap = make(map[string]interface{})
-	ConfMap["Init.Port"] = config.Init.Port
-	ConfMap["log_Nu"] = config.Log.LogNu
-	ConfMap["save_dir"] = config.Init.SavePath
-	ConfMap["work_max"] = config.Init.WorkMax
-	if !CheckWritePermission(config.Init.SavePath) {
-		panic("save_dir: " + config.Init.SavePath + " can not write")
+	savePath := ConfMap.Init.SavePath
+	_, err = os.Stat(savePath)
+	if err != nil && os.IsNotExist(err) {
+		err = os.Mkdir(savePath, 0755)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if !CheckWritePermission(savePath) {
+		panic("save_dir: " + strconv.Quote(savePath) + " can not write")
 	}
 	// 打印配置项的值
 	confjson, _ := json.Marshal(ConfMap)

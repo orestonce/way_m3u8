@@ -1,15 +1,15 @@
 package work
 
 import (
-	"encoding/json"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"github.com/orestonce/m3u8d"
 	"github.com/orestonce/m3u8d/m3u8dcpp"
 	log "github.com/sirupsen/logrus"
 	"gom3u8/conf"
 	"gom3u8/data"
-	"gorm.io/gorm"
+	"gom3u8/model"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -18,28 +18,12 @@ import (
 )
 
 const (
-	StateAll   = 0
 	StateReady = 1
 	StateEnd   = 2
 	StateError = 3
 )
 
-type Work struct {
-	ID         int       `json:"ID"`
-	Name       string    `json:"name"`
-	Url        string    `json:"url"`
-	SaveDir    string    `json:"save_dir"`
-	State      int       `json:"state"`
-	Info       string    `json:"info"`
-	CreateTime time.Time `json:"create_time"`
-	UpdateTime time.Time `json:"update_time"`
-}
-
-func (w Work) TableName() string {
-	return "work_info"
-}
-
-func (work *Work) Save(url string, fileName string, save_dir string) (err error) {
+func WorkSave(url string, fileName string, save_dir string) (err error) {
 	url = strings.Replace(url, " ", "", -1)
 	fileName = strings.Replace(fileName, " ", "", -1)
 	save_dir = strings.Replace(save_dir, " ", "", -1)
@@ -53,72 +37,45 @@ func (work *Work) Save(url string, fileName string, save_dir string) (err error)
 	log.Info("url:", url)
 	log.Info("fileName:", fileName)
 	log.Info("save_dir:", save_dir)
-	db := data.DataDB
-	workInfo := &Work{
-		Name:       fileName,
-		Url:        url,
-		State:      1,
-		SaveDir:    save_dir,
-		CreateTime: time.Now(),
-		UpdateTime: time.Now(),
+	db := data.GetDbInstance()
+	temp := md5.Sum([]byte(url))
+	id := hex.EncodeToString(temp[:])
+	ok := db.Work_D().Select().Where_ID().Equal(id).MustRun_Exist()
+	if ok == false {
+		db.Work_D().MustInsert(model.Work_D{
+			ID:         id,
+			Name:       fileName,
+			Url:        url,
+			SaveDir:    save_dir,
+			State:      StateReady,
+			CreateTime: time.Now(),
+			UpdateTime: time.Now(),
+		})
+	} else {
+		db.Work_D().Update().Where_ID().Equal(id).
+			Set_Name(fileName).
+			Set_Url(url).
+			Set_SaveDir(save_dir).
+			Set_State(StateReady).
+			Set_UpdateTime(time.Now()).MustRun()
 	}
-	err = db.Where("url=?", url).First(&workInfo).Error
-	if err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
-
-	}
-	if workInfo.ID != 0 {
-		id := fmt.Sprint(workInfo.ID)
-		log.Warn("work already exists: " + id)
-		return errors.New("work already exists: " + id)
-	}
-
-	db = db.Model(workInfo)
-	err = db.Where("url=?", url).Create(&workInfo).Error
-	if err != nil {
-
-		return err
-	}
-
-	log.Info("save:", workInfo)
 	return
 }
 
-func (work *Work) GetNotWorkingWork(startId int) *Work {
-
-	workInfoList := []Work{}
-	db := data.DataDB
-	db.Error = nil
-	db.Model(work)
-	db = db.Where("state = ?", StateReady).Order("id").Where("id>?", startId).Find(&workInfoList)
-	if db.RowsAffected > 0 {
-		return &workInfoList[0]
+func GetNotWorkingWork() *model.Work_D {
+	instance, ok := data.GetDbInstance().Work_D().Select().Where_State().Equal(StateReady).OrderBy_UpdateTime().ASC().MustRun_ResultOne2()
+	if ok == false {
+		return nil
 	}
-	return nil
+	return &instance
 }
-func (work *Work) List(Limit, Offset int) *[]Work {
-	db := data.DataDB
-	db.Error = nil
-	db.Model(work)
-	return nil
+
+func WorkEnd(id string) {
+	data.GetDbInstance().Work_D().Update().Where_ID().Equal(id).Set_State(StateEnd).MustRun()
 }
-func (work *Work) End() error {
-	db := data.DataDB
-	db.Model(work)
-	work.State = StateEnd
-	db.Save(work)
-	return nil
-}
-func (work *Work) Error(err_msg string) error {
-	log.Warn(work.ID, " download err:", err_msg)
-	db := data.DataDB
-	db.Model(work)
-	work.State = StateError
-	work.Info = err_msg
-	db.Save(work)
-	return nil
+func WorkError(id string, err_msg string) {
+	log.Warn(id, " download err:", err_msg)
+	data.GetDbInstance().Work_D().Update().Where_ID().Equal(id).Set_Info(err_msg).Set_State(StateError).MustRun()
 }
 
 func extractFilenameFromURL(urlStr string) (string, error) {
@@ -167,44 +124,23 @@ func DownloadFromCmd(req m3u8d.StartDownload_Req) error {
 	log.Info("下载成功, 保存路径", resp.SaveFileTo)
 	return nil
 }
-func ExtractDomain(rawURL string) (string, error) {
-	// 解析URL
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return "", err
-	}
-
-	// 获取主机名
-	hostname := parsedURL.Hostname()
-
-	// 如果主机名包含端口号，则去除它
-	if strings.Contains(hostname, ":") {
-		parts := strings.SplitN(hostname, ":", 2)
-		hostname = parts[0]
-	}
-
-	return hostname, nil
-}
 
 func Working() {
-	workListMaxNu := conf.ConfMap["work_max"].(int)
-	workList := []Worker{}
+	workListMaxNu := conf.ConfMap.Init.WorkMax
+	var workList []Worker
 	for i := 0; i < workListMaxNu; i++ {
 		workList = append(workList, NewWorker())
 	}
 	for {
-		w := &Work{}
 		//过滤已处理的任务
-		startId := 0
 		for {
 			for _, worker := range workList {
 				if worker.State {
-					readywork := w.GetNotWorkingWork(startId)
+					readywork := GetNotWorkingWork()
 					if readywork == nil {
 						time.Sleep(5 * time.Second)
 						continue
 					}
-					startId = readywork.ID
 					worker.State = false
 					go worker.Start(readywork)
 				}
@@ -223,43 +159,16 @@ func NewWorker() Worker {
 		State: true,
 	}
 }
-func (w Worker) Start(readywork *Work) {
-	workOnece(readywork)
+func (w Worker) Start(readywork *model.Work_D) {
+	workOnce(readywork)
 	w.State = true
 }
 
-func workOnece(readywork *Work) {
+func workOnce(readywork *model.Work_D) {
 	log.Info("readywork:", readywork)
 	_, err := os.Stat(readywork.SaveDir)
 	if err != nil {
 		os.MkdirAll(readywork.SaveDir, os.ModePerm)
-	}
-	domain, err := ExtractDomain(readywork.Url)
-
-	if err != nil {
-		log.Warn("域名解析错误： ", err)
-		return
-	}
-
-	header_filename := "header.json"
-	headers_list := []URLData{}
-
-	header_data, err := os.ReadFile(header_filename)
-	if err != nil {
-		readywork.Error("Error reading header jspn file:" + err.Error())
-		return
-	}
-	err = json.Unmarshal(header_data, &headers_list)
-	if err != nil {
-		log.Error("Error parsing JSON:", err)
-		readywork.Error("Error parsing JSON:" + err.Error())
-		return
-	}
-	header := make(map[string][]string)
-	for _, headers_data := range headers_list {
-		if headers_data.URL == domain {
-			header = headers_data.Header
-		}
 	}
 	req := m3u8d.StartDownload_Req{
 		M3u8Url:                  readywork.Url,
@@ -268,7 +177,7 @@ func workOnece(readywork *Work) {
 		FileName:                 readywork.Name,
 		SkipTsExpr:               "",
 		SetProxy:                 "",
-		HeaderMap:                header,
+		HeaderMap:                nil,
 		SkipRemoveTs:             false,
 		ProgressBarShow:          false,
 		ThreadCount:              8,
@@ -280,17 +189,9 @@ func workOnece(readywork *Work) {
 	err = DownloadFromCmd(req)
 
 	if err != nil {
-
-		readywork.Error(err.Error())
+		WorkError(readywork.ID, err.Error())
 		return
 	}
 
-	readywork.End()
-
-}
-
-// 定义header.json主结构体
-type URLData struct {
-	URL    string              `json:"url"`
-	Header map[string][]string `json:"header"`
+	WorkEnd(readywork.ID)
 }

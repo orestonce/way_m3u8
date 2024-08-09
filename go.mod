@@ -5,8 +5,8 @@ go 1.22
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/glebarez/go-sqlite v1.22.0
-	github.com/glebarez/sqlite v1.11.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
+	github.com/orestonce/korm v0.0.0-20240508064438-451ee5c45ba9
 	github.com/orestonce/m3u8d v1.24.11
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5
 	github.com/sirupsen/logrus v1.9.3
