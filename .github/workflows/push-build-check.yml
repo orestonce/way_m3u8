@@ -26,23 +26,23 @@ jobs:
           go mod tidy
           go run export/main.go
           
-          CGO_ENABLED=0
-          GOOS="windows"
-          GOARCH="386"
+          $env:CGO_ENABLED=0
+          $env:GOOS="windows"
+          $env:GOARCH="386"
           go build -o bin/waym3u8_windows_x86.exe
 
-          GOOS="windows"
-          GOARCH="amd64"
+          $env:GOOS="windows"
+          $env:GOARCH="amd64"
           go build -o bin/waym3u8_windows_x64.exe
 
-          GOOS="linux"
-          GOARCH="386"
+          $env:GOOS="linux"
+          $env:GOARCH="386"
           go build -o bin/waym3u8_linux_x86
 
-          GOOS="linux"
-          GOARCH="amd64"
+          $env:GOOS="linux"
+          $env:GOARCH="amd64"
           go build -o bin/waym3u8_linux_x64
 
-          GOOS="linux"
-          GOARCH="mipsle"
+          $env:GOOS="linux"
+          $env:GOARCH="mipsle"
           go build -o bin/waym3u8_linux_mipsle
