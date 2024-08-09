@@ -6,6 +6,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 type Config struct {
@@ -54,7 +55,7 @@ func ConfInit() {
 	ConfMap["save_dir"] = config.Init.SavePath
 	ConfMap["work_max"] = config.Init.WorkMax
 	if !CheckWritePermission(config.Init.SavePath) {
-		panic("save_dir: " + config.Init.SavePath + "can not write")
+		panic("save_dir: " + config.Init.SavePath + " can not write")
 	}
 	// 打印配置项的值
 	confjson, _ := json.Marshal(ConfMap)
@@ -63,6 +64,7 @@ func ConfInit() {
 
 // 检查文件夹是否可写
 func CheckWritePermission(dirPath string) bool {
+	dirPath, _ = filepath.Abs(dirPath)
 	tmpFile, err := os.CreateTemp(dirPath, "test*")
 	if err != nil {
 		return false

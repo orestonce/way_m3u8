@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -9,8 +10,13 @@ import (
 	"gom3u8/task"
 	"gom3u8/work"
 	"gopkg.in/natefinch/lumberjack.v2"
+	"io/fs"
+	"net/http"
 	"strconv"
 )
+
+//go:embed static
+var static embed.FS
 
 func main() {
 
@@ -40,7 +46,12 @@ func run() {
 	go work.Working()
 	r := gin.Default()
 	tc := task.TaskController{}
-	r.Static("/static", "./static")
+	//r.Static("/static", "./static")
+	sub, err := fs.Sub(static, "static")
+	if err != nil {
+		panic(err)
+	}
+	r.StaticFS("/static", http.FS(sub))
 	r.POST("/addTask", tc.AddTask)
 
 	r.GET("/health", func(c *gin.Context) {

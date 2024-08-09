@@ -1,9 +1,0 @@
-init:
-  port: 2045
-  name: "default"
-  save_dir: "./video"
-  work_max: 8
-log:
-  path: "./log"
-  level: "debug"
-  logNu: "10"
