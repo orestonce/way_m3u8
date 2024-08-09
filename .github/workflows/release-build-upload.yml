@@ -29,9 +29,6 @@ jobs:
           go run export/main.go
           
           $env:CGO_ENABLED=0
-          $env:GOOS="windows"
-          $env:GOARCH="386"
-          go build -o bin/waym3u8_windows_x86.exe
 
           $env:GOOS="windows"
           $env:GOARCH="amd64"
@@ -44,17 +41,6 @@ jobs:
           $env:GOOS="linux"
           $env:GOARCH="amd64"
           go build -o bin/waym3u8_linux_x64
-
-          $env:GOOS="linux"
-          $env:GOARCH="mipsle"
-          go build -o bin/waym3u8_linux_mipsle
-
-      - name: upload release waym3u8_windows_x86
-        uses: Guerra24/upload-to-release@v1
-        with:
-          name: waym3u8_windows_x86-${{ github.ref_name }}.exe
-          path: bin/waym3u8_windows_x86.exe
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: upload release waym3u8_windows_x64
         uses: Guerra24/upload-to-release@v1
@@ -75,11 +61,4 @@ jobs:
         with:
           name: waym3u8_linux_x64-${{ github.ref_name }}.exe
           path: bin/waym3u8_linux_x64
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: upload release waym3u8_linux_mipsle
-        uses: Guerra24/upload-to-release@v1
-        with:
-          name: waym3u8_linux_mipsle-${{ github.ref_name }}.exe
-          path: bin/waym3u8_linux_mipsle
           repo-token: ${{ secrets.GITHUB_TOKEN }}

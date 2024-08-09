@@ -22,3 +22,6 @@ https://github.com/orestonce/m3u8d
  * [ ] 使用github action自动编译发布
  * [ ] 配置信息储存在数据库, 无数据库则使用默认状态的配置
  * [ ] 优化界面显示
+ * [ ] 以下版本无法编译go-sqlite ?
+   * windows_386
+   * linux_mipsle
